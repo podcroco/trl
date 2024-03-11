@@ -92,9 +92,38 @@ if __name__ == "__main__":
     ################
     # Dataset
     ################
+    """
     raw_datasets = load_dataset(args.dataset_name)
     train_dataset = raw_datasets["train"]
     eval_dataset = raw_datasets["test"]
+    """
+        # データセットの読み込み
+    #dataset = load_dataset("bbz662bbz/databricks-dolly-15k-ja-gozarinnemon", split="train")
+    dataset = load_dataset("podcroco/desumasu2", split="train")
+    dataset = dataset.filter(lambda example: example["category"] == "transform")
+
+    # プロンプトの生成
+    def generate_prompt(example):
+        return """<bos><start_of_turn>user
+{}
+===
+{}
+<end_of_turn>
+<start_of_turn>model
+{}<eos>""".format(example["instruction"],example["input"],example["output"])
+
+
+    # textカラムの追加
+    def add_text(example):
+        example["text"] = generate_prompt(example)
+        return example
+    dataset = dataset.map(add_text)
+    dataset = dataset.remove_columns(["input", "category", "output", "index", "instruction"])
+
+    # データセットの分割
+    train_test_split = dataset.train_test_split(test_size=0.1)
+    train_dataset = train_test_split["train"]
+    eval_dataset = train_test_split["test"]
 
     ################
     # Training
